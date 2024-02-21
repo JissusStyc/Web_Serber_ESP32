@@ -1,16 +1,16 @@
 #include <Wire.h>
-#include <Adafruit_BMP280.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
 WebServer server(80);
 
-Adafruit_BMP280 bmp;
-
 IPAddress local_IP(192, 168, 20, 100);
 IPAddress gateway(192, 168, 20, 1);
 IPAddress subnet(255, 255, 0, 0);
+
+String hallValue = "";
+String bmpValue = "";
 
 const String HTML = R"====(
 <!DOCTYPE html>
@@ -89,23 +89,26 @@ void handleRoot() {
 }
 
 void handleValues() {
-  int hallValue = hallRead();
-  float bmpValue = bmp.readTemperature();
   String json = "{\"hall\":";
-  json += hallValue;
+  json += hallValue.toInt();
   json += ",\"bmp\":";
-  json += bmpValue;
+  json += bmpValue.toFloat();
   json += "}";
   server.send(200, "application/json", json);
 }
 
+void handlehall() {
+  hallValue = server.arg("value");
+  server.send(200, "text/plain", "OK");
+}
+
+void handlebmp() {
+  bmpValue = server.arg("value");
+  server.send(200, "text/plain", "OK");
+}
+
 void setup(){
   Serial.begin(115200);
-
-  if (!bmp.begin()) {
-    Serial.println("BMP280 ERROR");
-    while (1);
-  }
 
   //WiFi.begin("Lizandro", "baracunatana");
   //WiFi.begin("Manualidades Alexxxa", "Manualidadesalexxxa793579357935");
@@ -125,12 +128,14 @@ void setup(){
 
   server.on("/", handleRoot);
   server.on("/values", handleValues);
+  server.on("/hall", handlehall);
+  server.on("/bmp", handlebmp);
   if (!MDNS.begin("ESP32_Jissus")) {
     Serial.println("mDNS Error");
     while (1) {
       delay(1000);
     }
-  }else{Serial.println("mDNS Correct");}
+  }else{Serial.println("mDNS Correct ESP32_Jissus.local");}
   server.begin();
 }
 
